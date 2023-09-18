@@ -1,0 +1,87 @@
+trainer: dae_trainer
+
+datasets:
+  train:
+    name: webdataset_images
+    args:
+      root_path: data/mscoco/train
+      resolution_encoder: 224
+      resolution_dm: 256
+      training: True
+      batch_size: 64
+    loader:
+      num_workers: 24
+  val:
+    name: webdataset_images
+    args:
+      root_path: data/mscoco/val
+      resolution_encoder: 224
+      resolution_dm: 256
+      training: False
+      batch_size: 64
+    loader:
+      num_workers: 24
+
+model:
+  name: dae
+  args:
+    encoder:
+      name: vit
+      args:
+        image_size: 224
+        patch_size: 16
+        hidden_size: 512
+        num_hidden_layers: 6
+        num_attention_heads: 8
+        intermediate_size: 2048
+        num_decoding_tokens: 0
+    dm:
+      name: diffusion_model
+      args:
+        unet:
+          name: unet2d_cond_wrapped
+          args:
+            sample_size: 32
+            in_channels: 4
+            out_channels: 4
+            down_block_types: [DownBlock2D, CrossAttnDownBlock2D, CrossAttnDownBlock2D, CrossAttnDownBlock2D]
+            mid_block_type: UNetMidBlock2DCrossAttn
+            up_block_types: [CrossAttnUpBlock2D, CrossAttnUpBlock2D, CrossAttnUpBlock2D, UpBlock2D]
+            layers_per_block: 1
+            block_out_channels: [160, 320, 480, 640]
+            norm_num_groups: 32
+            cross_attention_dim: 512
+            attention_head_dim: 8
+        train_scheduler:
+          name: ddpm
+          args:
+            from_pretrained: CompVis/stable-diffusion-v1-4
+        scheduler:
+          name: pndm
+          args:
+            from_pretrained: CompVis/stable-diffusion-v1-4
+        vae:
+          name: ae_kl
+          args:
+            from_pretrained: CompVis/stable-diffusion-v1-4
+
+optimizers:
+  all:
+    name: adamw
+    args:
+      lr: 5.e-5
+      weight_decay: 0.001
+find_unused_parameters: true
+
+max_iter: 600000
+epoch_iter: 10000
+save_iter: 200000
+eval_iter: 20000
+vis_iter: 100000
+ckpt_select_metric:
+  name: loss
+  type: min
+
+visualize:
+  n_vis: 3
+  sample_shape: [4, 32, 32]

@@ -1,0 +1,82 @@
+trainer: dae_trainer
+
+datasets:
+  train:
+    name: webdataset_images
+    args:
+      root_path: data/mscoco/train
+      resolution_encoder: 224
+      resolution_dm: 256
+      training: True
+      batch_size: 48
+    loader:
+      num_workers: 36
+  val:
+    name: webdataset_images
+    args:
+      root_path: data/mscoco/val
+      resolution_encoder: 224
+      resolution_dm: 256
+      training: False
+      batch_size: 48
+    loader:
+      num_workers: 36
+
+model:
+  name: dae
+  args:
+    encoder:
+      name: vit
+      args:
+        from_pretrained: google/vit-base-patch16-224
+        image_size: 224
+        patch_size: 16
+        hidden_size: 768
+        num_hidden_layers: 12
+        num_attention_heads: 12
+        intermediate_size: 3072
+        num_decoding_tokens: 0
+    condition_neck:
+      name: empty_text_modifier
+      args:
+        ckpt: data/empty-text-emb-stable-diffusion-v1-4.pth
+    dm:
+      name: diffusion_model_dummy_l2
+      args:
+        unet:
+          name: unet2d_cond_wrapped
+          args:
+            from_pretrained: CompVis/stable-diffusion-v1-4
+        train_scheduler:
+          name: ddpm
+          args:
+            from_pretrained: CompVis/stable-diffusion-v1-4
+        scheduler:
+          name: pndm
+          args:
+            from_pretrained: CompVis/stable-diffusion-v1-4
+        vae:
+          name: ae_kl
+          args:
+            from_pretrained: CompVis/stable-diffusion-v1-4
+
+optimizers:
+  all:
+    name: adamw
+    args:
+      lr: 5.e-5
+      weight_decay: 0.001
+find_unused_parameters: true
+
+max_iter: 600000
+epoch_iter: 10000
+save_iter: 200000
+eval_iter: 20000
+vis_iter: 100000
+ckpt_select_metric:
+  name: loss
+  type: min
+
+visualize:
+  n_vis: 3
+  sample_shape: [4, 32, 32]
