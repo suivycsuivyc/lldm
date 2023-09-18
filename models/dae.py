@@ -1,4 +1,5 @@
 import copy
+import math
 
 import torch
 import torch.nn as nn
@@ -15,7 +16,9 @@ class EmptyTextModifier(nn.Module):
         self.emb = nn.Parameter(torch.load(ckpt, map_location='cpu'))
         assert self.emb.shape[0] == 1 and self.emb.dim() == 3
         self.matl = nn.Parameter(torch.zeros(self.emb.shape[1], input_l))
-        self.matr = nn.Parameter(torch.zeros(input_d, self.emb.shape[2]))
+        matr_t = torch.zeros(self.emb.shape[2], input_d)
+        nn.init.kaiming_uniform_(matr_t, a=math.sqrt(5))
+        self.matr = nn.Parameter(matr_t.t().detach())
 
     def forward(self, z):
         x = z['decoding_features']
